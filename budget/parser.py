@@ -26,7 +26,8 @@ MONEY_MONEY_MAPPING: Dict[str, str] = {
 }
 
 
-def parse_file(file_path: Path, account_name: str):
+
+def parse_csv(file_path: Path, account_name: str):
     with file_path.open() as f:
         csv_reader = csv.DictReader(f, delimiter=";")
         return [
@@ -75,4 +76,4 @@ def _prepare_transaction(transaction: Transaction) -> List[str]:
 
 
 if __name__ == "__main__":
-    parse_file()
+    parse_csv()
