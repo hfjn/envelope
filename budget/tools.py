@@ -40,22 +40,5 @@ def _parse_transactions_from_statement(
     return _transactions
 
 
-def running_balance(transactions: List[Transaction]) -> Dict[str, float]:
-    balances = daily_balance(transactions)
-    previous_day = None
-    for day, value in balances.items():
-        if previous_day:
-            balances[day] = balances[previous_day] + balances[day]
-        previous_day = day
-    return balances
 
-
-def daily_balance(transactions: List[Transaction]) -> Dict[str, float]:
-    balances = {}
-    for transaction in transactions:
-        if transaction.date not in balances.keys():
-            balances[transaction.date] = transaction.amount
-        else:
-            balances[transaction.date] += transaction.amount
-    return balances
 

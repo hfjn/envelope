@@ -1,77 +1,64 @@
-from datetime import datetime
-from typing import Dict
+from itertools import groupby
+from pathlib import Path
+from typing import List, Dict
+
+import pendulum
+
+from budget.parser import parse_file
+from budget.transaction import Transaction
+
+Giro = Path("/Users/hfjn/code/budget/data/Giro.csv")
+Kreditkarte = Path("/Users/hfjn/code/budget/data/Kreditkarte.csv")
 
 
-class Budget:
-    def __init__(self, name):
-        self.name = name
-
-    def __str__(self):
-        return self.name
-
-
-class Account:
-    def __init__(self, name):
-        self.name = name
-
-    def __str__(self):
-        return self.name
-
-
-class Transaction:
-    def __init__(
-        self,
-        date: datetime,
-        account: Account,
-        amount: float,
-        *,
-        payee: str = None,
-        budget: Budget = None,
-        currency="€",
-        description="",
-    ):
-        self._date: datetime = date
-        self.currency: str = currency
-        self.amount: float = amount
-        self.description: str = description
-        self.payee: str = payee
-        self.account: Account = account
-        self.budget: Budget = budget
-
-    def __str__(self):
-        return f"{self._date.date()}: {self.account} - {self.payee} {self.amount}{self.currency} [{self.budget}]"
+class Ledger:
+    def __init__(self):
+        self.transactions: List[Transaction] = []
 
     @property
-    def date(self):
-        return self._date.date().isoformat()
+    def payees(self):
+        return set(t.payee for t in self.transactions)
+
+    @property
+    def currencies(self):
+        return set(t.currency for t in self.transactions)
+
+    @property
+    def accounts(self):
+        return set(t.account for t in self.transactions)
+
+    @property
+    def start_date(self):
+        return min(set(t.date for t in self.transactions))
+
+    def add_transactions_from_file(self):
+        self.transactions += parse_file(Giro, "DKB")
+        self.transactions += parse_file(Kreditkarte, "Kreditkarte")
+
+    def running_balance(
+        self, start: pendulum.DateTime, end: pendulum.DateTime
+    ) -> Dict[str, float]:
+        balance_range = pendulum.period(start, end)
+        for day in balance_range.range("days"):
+            print(f"{day.isoformat()}: {self.balance(date=day)}")
+
+    # TODO: Make group key dynamic
+    def balance(self, *, date: pendulum.DateTime = pendulum.now()):
+        balances = {}
+        for account, transactions in groupby(
+            self.transactions, key=lambda t: t.account
+        ):
+            balances[account] = sum(
+                transaction.amount
+                for transaction in transactions
+                if transaction.date < date
+            )
+        return balances
 
 
-class SplitTransaction(Transaction):
-    def __init__(
-        self,
-        date: datetime,
-        account: Account,
-        amount: float,
-        subactions: Dict[Budget, float],
-        *,
-        payee: str = None,
-        currency="Euro",
-        description=None,
-    ):
-        super().__init__(
-            date,
-            account,
-            amount,
-            payee=payee,
-            currency=currency,
-            description=description,
-        )
-        self.subactions: Dict[Budget, float] = subactions
 
-        assert self.amount + self._sum_subactions() == 0
 
-    def _sum_subactions(self):
-        subaction_sum = 0
-        for _, value in self.subactions.items():
-            subaction_sum += value
-        return subaction_sum
+if __name__ == "__main__":
+    ledger = Ledger()
+    ledger.add_transactions_from_file()
+    print(ledger.start_date)
