@@ -1,7 +1,8 @@
+import json
+import pprint
 from itertools import groupby
 from pathlib import Path
 from typing import List, Dict
-import json
 
 import pendulum
 
@@ -48,12 +49,14 @@ class Ledger:
             print(f"{day.isoformat()}: {self.balance(date=day)}")
 
     # TODO: Make group key dynamic
-    def balance(self, *, date: pendulum.DateTime = pendulum.now()):
+    def balance(
+        self, *, date: pendulum.DateTime = pendulum.now(), group: str = "account"
+    ):
         balances = {}
-        for account, transactions in groupby(
-            self.transactions, key=lambda t: t.account
+        for grouped, transactions in groupby(
+            self.transactions, key=lambda t: getattr(t, group)
         ):
-            balances[account] = sum(
+            balances[grouped] = sum(
                 transaction.amount
                 for transaction in transactions
                 if transaction.date < date
@@ -67,9 +70,13 @@ class Ledger:
     def load_from_file(self, file_path: str):
         with Path(file_path).open() as f:
             transactions = json.load(f)
-            self.transactions = [Transaction(**transaction) for transaction in transactions]
+            self.transactions = [
+                Transaction(**transaction) for transaction in transactions
+            ]
 
 
 if __name__ == "__main__":
+    ledger = Ledger()
     ledger.load_from_file("output.json")
-    print(ledger.balance())
+    pprint.pprint(ledger.balance())
+    pprint.pprint(ledger.balance(group="payee"))
