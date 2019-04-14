@@ -1,13 +1,11 @@
 import csv
 from collections import OrderedDict
 from pathlib import Path
-from typing import List, Dict
-import pprint
+from typing import Dict
 
 import pendulum
 
 from budget.transaction import Transaction
-
 
 BUDGET_REGEX = "#\s([0-9]{4}\-[0-9]{2})"
 
@@ -24,7 +22,6 @@ MONEY_MONEY_MAPPING: Dict[str, str] = {
     "date_layout": "DD.MM.YY",
     "decimal_separator": ",",
 }
-
 
 
 def parse_csv(file_path: Path, account_name: str):
@@ -55,25 +52,3 @@ def _parse_row(
 
 def _parse_amount(amount: str, separator: str):
     return float(amount.replace(separator, "."))
-
-
-def write_transactions(transactions: List[Transaction]):
-    with open(FILE_PATH, "w") as ledger:
-        for transaction in transactions:
-            ledger.writelines(_prepare_transaction(transaction))
-            ledger.write("\n")
-
-
-def _prepare_transaction(transaction: Transaction) -> List[str]:
-    prepared_list: List[str] = []
-    prepared_list.append(f"{transaction.date} - {transaction.description}\n")
-    prepared_list.append(
-        f'    "{transaction.payee}" {transaction.amount} {transaction.currency}\n'
-    )
-    for budget, value in transaction.subactions.items():
-        prepared_list.append(f'    "{budget}", {value} {transaction.currency}\n')
-    return prepared_list
-
-
-if __name__ == "__main__":
-    parse_csv()
