@@ -1,7 +1,7 @@
 import csv
 from collections import OrderedDict
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 import pendulum
 
@@ -24,7 +24,7 @@ MONEY_MONEY_MAPPING: Dict[str, str] = {
 }
 
 
-def parse_csv(file_path: Path, account_name: str):
+def parse_csv(file_path: Path, account_name: str) -> List[Transaction]:
     with file_path.open() as f:
         csv_reader = csv.DictReader(f, delimiter=";")
         return [

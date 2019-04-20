@@ -1,13 +1,14 @@
 import json
-import pprint
 from itertools import groupby
 from pathlib import Path
 from typing import List, Dict
 
 import pendulum
 
-from budget.parser import parse_csv
 from budget.transaction import Transaction
+from budget import parser
+
+Snapshot = Path("/Users/hfjn/code/budget/output.json")
 
 Giro = Path("/Users/hfjn/code/budget/data/Giro.csv")
 Kreditkarte = Path("/Users/hfjn/code/budget/data/Kreditkarte.csv")
@@ -16,6 +17,7 @@ Kreditkarte = Path("/Users/hfjn/code/budget/data/Kreditkarte.csv")
 class Ledger:
     def __init__(self):
         self.transactions: List[Transaction] = []
+        self.load_from_json("output.json")
 
     @property
     def payees(self):
@@ -37,10 +39,6 @@ class Ledger:
     def json(self):
         return json.dumps(self.transactions, default=lambda x: x.as_dict())
 
-    def add_transactions_from_file(self):
-        self.transactions += parse_csv(Giro, "DKB")
-        self.transactions += parse_csv(Kreditkarte, "Kreditkarte")
-
     def running_balance(
         self, start: pendulum.DateTime, end: pendulum.DateTime
     ) -> Dict[str, float]:
@@ -48,7 +46,6 @@ class Ledger:
         for day in balance_range.range("days"):
             print(f"{day.isoformat()}: {self.balance(date=day)}")
 
-    # TODO: Make group key dynamic
     def balance(
         self, *, date: pendulum.DateTime = pendulum.now(), group: str = "account"
     ):
@@ -63,20 +60,27 @@ class Ledger:
             )
         return balances
 
-    def write_to_file(self):
+    def write_to_json(self):
         file = Path("output.json")
         file.write_text(self.json)
 
-    def load_from_file(self, file_path: str):
+    def load_from_json(self, file_path: str):
         with Path(file_path).open() as f:
             transactions = json.load(f)
             self.transactions = [
                 Transaction(**transaction) for transaction in transactions
             ]
 
+    def load_from_file(self, file_path: Path, *, account_name=None) -> int:
+        old_length = len(self.transactions)
+        with file_path.open() as f:
+            new_transactions = parser.parse_csv(f, account_name)
+            self.add_to_transactions(new_transactions)
+        return len(self.transactions) - old_length
 
-if __name__ == "__main__":
-    ledger = Ledger()
-    ledger.load_from_file("output.json")
-    pprint.pprint(ledger.balance())
-    pprint.pprint(ledger.balance(group="payee"))
+    def add_to_transactions(self, new_transactions: List[Transaction]):
+        self.transactions += [
+            transaction
+            for transaction in new_transactions
+            if transaction not in set(self.transactions)
+        ]

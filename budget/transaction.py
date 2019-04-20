@@ -33,10 +33,19 @@ class Transaction:
             self.currency: str = "€"
 
     def __str__(self):
-        return f"{self.date.date()}: {self.account} - {self.payee} {self.amount}{self.currency}"
+        return f"{self.date.isoformat()}: {self.account} - {self.payee} {self.amount}{self.currency}"
 
     def __repr__(self):
-        return f"{self.date.date()}: {self.account} - {self.payee} {self.amount}{self.currency}"
+        return f"{self.date},{self.value_date},{self.purpose},{self.account},{self.amount},{self.payee},{self.currency}"
+
+    # TODO: Only use imported & fields for comparison
+    def __eq__(self, other):
+        if not isinstance(other, Transaction):
+            return False
+        return other.as_dict() == self.as_dict()
+
+    def __hash__(self):
+        return hash(self.__repr__())
 
     def as_dict(self) -> Dict[str, Any]:
         formatted_transaction = self.__dict__
