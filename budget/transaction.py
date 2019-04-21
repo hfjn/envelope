@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import pendulum
 
@@ -15,12 +15,6 @@ class Transaction:
         value_date: Any = None,
         category=None,
     ):
-        if isinstance(date, str):
-            date = pendulum.parse(date)
-
-        if isinstance(value_date, str):
-            value_date = pendulum.parse(value_date)
-
         self.date: pendulum.Date = date
         self.amount: float = amount
         self.purpose: str = purpose
@@ -29,8 +23,16 @@ class Transaction:
         self.category: str = category
         self.value_date: pendulum.Date = value_date
 
+        if not isinstance(self.date, pendulum.DateTime):
+            raise ValueError(f"Date {self.date} not pendulum.DateTime")
+        if not isinstance(self.value_date, pendulum.DateTime):
+            raise ValueError(f"Date {self.value_date} not pendulum.DateTime")
+
         if currency == "EUR":
             self.currency: str = "€"
+
+        else:
+            self.currency = currency
 
     def __str__(self):
         return f"{self.date.isoformat()}: {self.account} - {self.payee} {self.amount}{self.currency}"
@@ -48,13 +50,15 @@ class Transaction:
         return hash(self.__repr__())
 
     def as_dict(self) -> Dict[str, Any]:
-        formatted_transaction = self.__dict__
-        formatted_transaction["date"] = self.date.isoformat()
-        if self.value_date:
-            formatted_transaction["value_date"] = self.value_date.isoformat()
-        else:
-            formatted_transaction["value_date"] = None
-        return formatted_transaction
+        return {
+            "amount": self.amount,
+            "purpose": self.purpose,
+            "payee": self.payee,
+            "account": self.account,
+            "category": self.account,
+            "value_date": self.value_date.isoformat(),
+            "date": self.date.isoformat(),
+        }
 
     @property
     def formatted_date(self):

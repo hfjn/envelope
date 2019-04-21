@@ -20,6 +20,6 @@ def import_files():
     files = list_files("/Users/hfjn/code/budget/data")
     for file in files:
         account_name = click.prompt(f"Account name for {file.stem}:", type=str, default=None)
-        number_of_new_transactions = ledger.load_from_file(file, account_name=account_name)
+        number_of_new_transactions = ledger.import_transactions_from_file(file, account_name=account_name)
         click.echo(f"Added {number_of_new_transactions} new transactions.")
 

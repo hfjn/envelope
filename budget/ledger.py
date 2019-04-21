@@ -2,11 +2,12 @@ import json
 from itertools import groupby
 from pathlib import Path
 from typing import List, Dict
+import functools
 
 import pendulum
 
-from budget.transaction import Transaction
 from budget import parser
+from budget.transaction import Transaction
 
 Snapshot = Path("/Users/hfjn/code/budget/output.json")
 
@@ -15,9 +16,10 @@ Kreditkarte = Path("/Users/hfjn/code/budget/data/Kreditkarte.csv")
 
 
 class Ledger:
-    def __init__(self):
+    def __init__(self, *, ledger_file=None):
         self.transactions: List[Transaction] = []
-        self.load_from_json("output.json")
+        if ledger_file:
+            self.load_from_json(ledger_file)
 
     @property
     def payees(self):
@@ -33,7 +35,7 @@ class Ledger:
 
     @property
     def start_date(self):
-        return min(set(t.date for t in self.transactions))
+        return min(set(t._date for t in self.transactions))
 
     @property
     def json(self):
@@ -68,19 +70,37 @@ class Ledger:
         with Path(file_path).open() as f:
             transactions = json.load(f)
             self.transactions = [
-                Transaction(**transaction) for transaction in transactions
+                Transaction(**parser.parse_json_row(transaction))
+                for transaction in transactions
             ]
 
-    def load_from_file(self, file_path: Path, *, account_name=None) -> int:
+    def _persist(func):
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            print("inside wrapper")
+            result = func(self, *args, **kwargs)
+            self.write_to_json()
+            return result
+
+        return wrapper
+
+    @_persist
+    def import_transactions_from_file(
+        self, file_path: Path, *, account_name=None
+    ) -> int:
         old_length = len(self.transactions)
-        with file_path.open() as f:
-            new_transactions = parser.parse_csv(f, account_name)
-            self.add_to_transactions(new_transactions)
+        new_transactions = parser.parse_file(file_path, account_name)
+        self.add_transactions(new_transactions)
         return len(self.transactions) - old_length
 
-    def add_to_transactions(self, new_transactions: List[Transaction]):
-        self.transactions += [
-            transaction
-            for transaction in new_transactions
-            if transaction not in set(self.transactions)
-        ]
+    def add_transactions(self, new_transactions: List[Transaction], *, validation=True):
+        if validation and len(self.transactions) != 0:
+            self.transactions += [
+                transaction
+                for transaction in new_transactions
+                if transaction not in self.transactions
+            ]
+        else:
+            self.transactions += [transaction for transaction in new_transactions]
+
+
