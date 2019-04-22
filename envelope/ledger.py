@@ -2,20 +2,19 @@ import functools
 import json
 from itertools import groupby
 from pathlib import Path
-from typing import List, Dict, Callable, Set, Any
+from typing import Any, Callable, Dict, List, Set
 
 import pendulum
-
-from envelope.config import Config
 from envelope import parser
+from envelope.config import Config
 from envelope.transaction import Transaction
 
 
 class Ledger:
     def __init__(self) -> None:
         self.transactions: List[Transaction] = []
-        self._config: Config = Config()
-        self._snapshot: Path = Path(self._config.folder) / self._config.snapshot_name
+        self.config: Config = Config()
+        self._snapshot: Path = Path(self.config.folder) / self.config.snapshot_name
         if self._snapshot.exists():
             self.load_from_json(self._snapshot)
 

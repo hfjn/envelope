@@ -18,6 +18,10 @@ class Config:
     def snapshot_name(self) -> Any:
         return self.config["settings"]["snapshot_name"]
 
+    @property
+    def accounts(self) -> Any:
+        return self.config["accounts"]
+
     def _load_config(self) -> MutableMapping[str, Any]:
         config_path = self._get_config_path()
         with config_path.open() as f:
