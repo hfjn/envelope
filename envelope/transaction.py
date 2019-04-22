@@ -6,22 +6,22 @@ import pendulum
 class Transaction:
     def __init__(
         self,
-        date: pendulum.Datetime = None,
+        date: pendulum.DateTime = None,
         account: str = None,
         amount: float = None,
         payee: str = None,
         currency: str = "€",
         purpose: str = "",
-        value_date: pendulum.Datetime = None,
+        value_date: pendulum.DateTime = None,
         category: str = None,
     ):
-        self.date: pendulum.Datetime = date
+        self.date: pendulum.DateTime = date
         self.amount: float = amount
         self.purpose: str = purpose
         self.payee: str = payee
         self.account: str = account
         self.category: str = category
-        self.value_date: pendulum.Datetime = value_date
+        self.value_date: pendulum.DateTime = value_date
 
         if not isinstance(self.date, pendulum.DateTime):
             raise ValueError(f"Date {self.date} not pendulum.DateTime")

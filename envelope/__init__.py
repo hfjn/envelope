@@ -4,7 +4,7 @@ import toml
 
 from envelope.ledger import Ledger
 
-_CONFIG = Path("/Users/hfjn/code/budget/config/config.toml")
+_CONFIG = Path("/Users/hfjn/code/envelope/config/config.toml")
 
 with _CONFIG.open() as c:
     config = toml.load(c)

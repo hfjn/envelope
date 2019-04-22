@@ -9,10 +9,10 @@ import pendulum
 from envelope import parser
 from envelope.transaction import Transaction
 
-Snapshot = Path("/Users/hfjn/code/budget/output.json")
+Snapshot = Path("/Users/hfjn/code/envelope/output.json")
 
-Giro = Path("/Users/hfjn/code/budget/data/Giro.csv")
-Kreditkarte = Path("/Users/hfjn/code/budget/data/Kreditkarte.csv")
+Giro = Path("/Users/hfjn/code/envelope/data/Giro.csv")
+Kreditkarte = Path("/Users/hfjn/code/envelope/data/Kreditkarte.csv")
 
 
 class Ledger:
@@ -80,10 +80,9 @@ class Ledger:
                 for transaction in transactions
             ]
 
-    @staticmethod
-    def _persist(func: Callable) -> Callable:
+    def _persist(func: Callable) -> Any:  # type: ignore
         @functools.wraps(func)
-        def wrapper(self: Ledger, *args: Any, **kwargs: Any) -> Any:
+        def wrapper(self, *args: Any, **kwargs: Any) -> Any:  # type: ignore
             result = func(self, *args, **kwargs)
             self.write_to_json()
             return result
