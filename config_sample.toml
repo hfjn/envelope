@@ -1,0 +1,9 @@
+[settings]
+folder = ""
+
+[accounts]
+
+    [accounts.dkb]
+
+    [accounts.creditcard]
+    friendly_name = "Kreditkarte"

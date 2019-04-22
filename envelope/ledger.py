@@ -11,9 +11,6 @@ from envelope.transaction import Transaction
 
 Snapshot = Path("/Users/hfjn/code/envelope/output.json")
 
-Giro = Path("/Users/hfjn/code/envelope/data/Giro.csv")
-Kreditkarte = Path("/Users/hfjn/code/envelope/data/Kreditkarte.csv")
-
 
 class Ledger:
     def __init__(self, *, ledger_file: str = None) -> None:

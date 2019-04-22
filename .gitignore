@@ -1,6 +1,7 @@
 data/
 .idea/
 output.json
+config.toml
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template

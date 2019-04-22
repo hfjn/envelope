@@ -1,12 +1,6 @@
-from pathlib import Path
-
-import toml
-
 from envelope.ledger import Ledger
+from envelope.config import get_config
 
-_CONFIG = Path("/Users/hfjn/code/envelope/config/config.toml")
-
-with _CONFIG.open() as c:
-    config = toml.load(c)
+config = get_config()
 
 ledger = Ledger(ledger_file="output.json")
