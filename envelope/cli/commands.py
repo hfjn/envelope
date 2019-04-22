@@ -1,6 +1,7 @@
-import click
+import pprint
 
-from envelope import ledger, config
+import click
+from envelope import ledger
 from envelope.tools import list_files
 
 
@@ -17,6 +18,12 @@ def list() -> None:
 @envelope.command()
 def get() -> None:
     raise NotImplementedError
+
+
+# TODO: Enable possibility to set configs
+@envelope.command()
+def config() -> None:
+    pprint.pprint(ledger.config.config)
 
 
 @envelope.command()
@@ -40,7 +47,7 @@ def import_files() -> None:
     files = list_files("/Users/hfjn/code/envelope/data")
     for file in files:
         choices = [
-            account["friendly_name"] for _, account in config["accounts"].items()
+            account["friendly_name"] for _, account in ledger.config.accounts.items()
         ]
         account_name = click.prompt(
             f"Account name of {file.stem}:", default=None, type=click.Choice(choices)
