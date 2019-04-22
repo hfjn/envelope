@@ -6,10 +6,10 @@ from typing import List, Dict, Callable, Set, Any
 
 import pendulum
 
-from envelope import parser
+from envelope import parser, config
 from envelope.transaction import Transaction
 
-Snapshot = Path("/Users/hfjn/code/envelope/output.json")
+Snapshot: Path = Path(config["settings"]["folder"]) / "snapshot.json"  # type: ignore
 
 
 class Ledger:
