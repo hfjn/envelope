@@ -62,6 +62,18 @@ class Ledger:
             )
         return balances
 
+    def income_statement(
+        self, start_date: pendulum.DateTime, end_date: pendulum.DateTime
+    ) -> Dict[str, float]:
+        statement: Dict[str, float] = {}
+        for transaction in self.transactions:
+            if transaction.amount > 0 and start_date <= transaction.date <= end_date:
+                if transaction.payee in statement:
+                    statement[transaction.payee] += transaction.amount
+                else:
+                    statement[transaction.payee] = transaction.amount
+        return statement
+
     def write_to_json(self) -> None:
         file = Path(self._snapshot)
         file.write_text(self.json)

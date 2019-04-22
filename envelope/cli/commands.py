@@ -1,6 +1,8 @@
 import pprint
+from typing import Union
 
 import click
+import pendulum
 from envelope import ledger
 from envelope.tools import list_files
 
@@ -18,6 +20,20 @@ def list() -> None:
 @envelope.command()
 def get() -> None:
     raise NotImplementedError
+
+
+@envelope.command()
+@click.option("--start-date", default=ledger.start_date)
+@click.option("--end-date", default=ledger.end_date)
+def income(
+    start_date: Union[str, pendulum.DateTime], end_date: Union[str, pendulum.DateTime]
+) -> None:
+    if isinstance(start_date, str):
+        start_date = pendulum.parse(start_date)
+    if isinstance(end_date, str):
+        end_date = pendulum.parse(end_date)
+    for income, value in ledger.income_statement(start_date, end_date).items():
+        click.echo(f"{income}: {value:0.2f}€")
 
 
 # TODO: Enable possibility to set configs
