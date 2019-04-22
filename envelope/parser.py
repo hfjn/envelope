@@ -1,15 +1,13 @@
 import csv
 from collections import OrderedDict
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Iterable
 
 import pendulum
 
-from budget.transaction import Transaction
+from envelope.transaction import Transaction
 
-BUDGET_REGEX = "#\s([0-9]{4}\-[0-9]{2})"
-
-MONEY_MONEY_MAPPING: Dict[str, str] = {
+MONEY_MONEY_MAPPING: Dict[str, Any] = {
     "fields": {
         "date": "Date",
         "value_date": "Value date",
@@ -24,7 +22,7 @@ MONEY_MONEY_MAPPING: Dict[str, str] = {
 }
 
 
-def parse_file(file_path: Path, account_name: str) -> List[Transaction]:
+def parse_file(file_path: Path, account_name: str) -> Any:
     with file_path.open() as file:
         file_type: str = file_path.suffix.replace(".", "")
         if file_type not in FILE_TYPE_MAPPING.keys():
@@ -32,7 +30,7 @@ def parse_file(file_path: Path, account_name: str) -> List[Transaction]:
         return FILE_TYPE_MAPPING[file_type](file, account_name)
 
 
-def parse_csv(file: Path, account_name: str):
+def parse_csv(file: Iterable, account_name: str) -> List[Transaction]:
     csv_reader = csv.DictReader(file, delimiter=";")
     rows = [
         _parse_csv_row(row, MONEY_MONEY_MAPPING, account_name) for row in csv_reader
@@ -40,7 +38,7 @@ def parse_csv(file: Path, account_name: str):
     return rows
 
 
-def parse_json_row(transaction: Dict[str, Any]):
+def parse_json_row(transaction: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(transaction["date"], pendulum.DateTime):
         transaction["date"] = pendulum.parse(transaction["date"])
     if not isinstance(transaction["value_date"], pendulum.DateTime):
@@ -49,7 +47,7 @@ def parse_json_row(transaction: Dict[str, Any]):
 
 
 def _parse_csv_row(
-    row: OrderedDict, mapping: Dict[str, str], account_name: str
+    row: OrderedDict, mapping: Dict[str, Any], account_name: str
 ) -> Transaction:
     """
     Parses csv row and sets all fields according to given mapping.
@@ -60,7 +58,7 @@ def _parse_csv_row(
     :param account_name:
     :return:
     """
-    transaction = {"account": account_name}
+    transaction: Dict[str, Any] = {"account": account_name}
     for field, mapped_field in mapping["fields"].items():
         if field == "date" or field == "value_date":
             transaction[field] = pendulum.from_format(
@@ -76,7 +74,7 @@ def _parse_csv_row(
     return Transaction(**transaction)
 
 
-def _parse_csv_amount(amount: str, separator: str):
+def _parse_csv_amount(amount: str, separator: str) -> float:
     return float(amount.replace(separator, "."))
 
 

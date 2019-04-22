@@ -2,7 +2,7 @@ from pathlib import Path
 
 import toml
 
-from budget.ledger import Ledger
+from envelope.ledger import Ledger
 
 _CONFIG = Path("/Users/hfjn/code/budget/config/config.toml")
 

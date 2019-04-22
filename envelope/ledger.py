@@ -1,13 +1,13 @@
+import functools
 import json
 from itertools import groupby
 from pathlib import Path
-from typing import List, Dict
-import functools
+from typing import List, Dict, Callable, Set, Any
 
 import pendulum
 
-from budget import parser
-from budget.transaction import Transaction
+from envelope import parser
+from envelope.transaction import Transaction
 
 Snapshot = Path("/Users/hfjn/code/budget/output.json")
 
@@ -16,51 +16,50 @@ Kreditkarte = Path("/Users/hfjn/code/budget/data/Kreditkarte.csv")
 
 
 class Ledger:
-    def __init__(self, *, ledger_file=None):
+    def __init__(self, *, ledger_file: str = None) -> None:
         self.transactions: List[Transaction] = []
         if ledger_file:
             try:
                 self.load_from_json(ledger_file)
-            except FileNotFoundError as er:
+            except FileNotFoundError:
                 print(f"File {ledger_file} does not exist. Loaded empty ledger.")
 
     @property
-    def payees(self):
+    def payees(self) -> Set:
         return set(t.payee for t in self.transactions)
 
     @property
-    def currencies(self):
+    def currencies(self) -> Set:
         return set(t.currency for t in self.transactions)
 
     @property
-    def accounts(self):
+    def accounts(self) -> Set:
         return set(t.account for t in self.transactions)
 
     @property
-    def start_date(self):
+    def start_date(self) -> pendulum.DateTime:
         return min(set(t.date for t in self.transactions))
 
     @property
-    def end_date(self):
+    def end_date(self) -> pendulum.DateTime:
         return max(set(t.date for t in self.transactions))
 
     @property
-    def json(self):
+    def json(self) -> str:
         return json.dumps(self.transactions, default=lambda x: x.as_dict())
 
     def running_balance(
         self, start: pendulum.DateTime, end: pendulum.DateTime
-    ) -> Dict[str, float]:
-        balance_range = pendulum.period(start, end)
-        for day in balance_range.range("days"):
-            print(f"{day.isoformat()}: {self.balance(date=day)}")
+    ) -> Dict[Any, float]:
+        balance_range: pendulum.Period = pendulum.period(start, end)
+        return {day: self.balance(date=day)[day] for day in balance_range.range("days")}
 
     def balance(
         self, *, date: pendulum.DateTime = pendulum.now(), group: str = "account"
-    ):
+    ) -> Dict[pendulum.DateTime, float]:
         balances = {}
         for grouped, transactions in groupby(
-            self.transactions, key=lambda t: getattr(t, group)
+            self.transactions, key=lambda t: getattr(t, group)  # type: ignore
         ):
             balances[grouped] = sum(
                 transaction.amount
@@ -69,11 +68,11 @@ class Ledger:
             )
         return balances
 
-    def write_to_json(self):
+    def write_to_json(self) -> None:
         file = Path("output.json")
         file.write_text(self.json)
 
-    def load_from_json(self, file_path: str):
+    def load_from_json(self, file_path: str) -> None:
         with Path(file_path).open() as f:
             transactions = json.load(f)
             self.transactions = [
@@ -81,9 +80,10 @@ class Ledger:
                 for transaction in transactions
             ]
 
-    def _persist(func):
+    @staticmethod
+    def _persist(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(self, *args, **kwargs):
+        def wrapper(self: Ledger, *args: Any, **kwargs: Any) -> Any:
             result = func(self, *args, **kwargs)
             self.write_to_json()
             return result
@@ -92,14 +92,16 @@ class Ledger:
 
     @_persist
     def import_transactions_from_file(
-        self, file_path: Path, *, account_name=None
+        self, file_path: Path, *, account_name: str = None
     ) -> int:
         old_length = len(self.transactions)
         new_transactions = parser.parse_file(file_path, account_name)
         self.add_transactions(new_transactions)
         return len(self.transactions) - old_length
 
-    def add_transactions(self, new_transactions: List[Transaction], *, validation=True):
+    def add_transactions(
+        self, new_transactions: List[Transaction], *, validation: bool = True
+    ) -> None:
         if validation and len(self.transactions) != 0:
             self.transactions += [
                 transaction
@@ -108,5 +110,3 @@ class Ledger:
             ]
         else:
             self.transactions += [transaction for transaction in new_transactions]
-
-

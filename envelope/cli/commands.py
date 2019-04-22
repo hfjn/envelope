@@ -1,32 +1,33 @@
 import click
 
-from budget import ledger, config
-from budget.tools import list_files
+from envelope import ledger, config
+from envelope.tools import list_files
 
 
 @click.group()
-def budget():
+def envelope() -> None:
     pass
 
 
-@budget.command()
-def list():
+@envelope.command()
+def list() -> None:
     raise NotImplementedError
 
 
-@budget.command()
-def get():
+@envelope.command()
+def get() -> None:
     raise NotImplementedError
 
 
-@budget.command()
+@envelope.command()
 @click.option("--group", default="account", required=False)
-def balance(group):
+def balance(group: str) -> None:
     for balance, value in ledger.balance(group=group).items():
         click.echo(f"{balance}: {value:0.2f}€")
 
-@budget.command()
-def stats():
+
+@envelope.command()
+def stats() -> None:
     click.echo(f"Start Date: {ledger.start_date.to_date_string()}")
     click.echo(f"End Date: {ledger.end_date.to_date_string()}")
     click.echo(f"Payees: {len(ledger.payees)}")
@@ -34,11 +35,13 @@ def stats():
     click.echo(f"Transactions: {len(ledger.transactions)}")
 
 
-@budget.command()
-def import_files():
-    files = list_files("/Users/hfjn/code/budget/data")
+@envelope.command()
+def import_files() -> None:
+    files = list_files("/Users/hfjn/code/envelope/data")
     for file in files:
-        choices = [account["friendly_name"] for _, account in config["accounts"].items()]
+        choices = [
+            account["friendly_name"] for _, account in config["accounts"].items()
+        ]
         account_name = click.prompt(
             f"Account name of {file.stem}:", default=None, type=click.Choice(choices)
         )
@@ -48,6 +51,6 @@ def import_files():
         click.echo(f"Added {number_of_new_transactions} new transactions.")
 
 
-@budget.command("net-worth")
-def networth():
+@envelope.command("net-worth")
+def networth() -> None:
     raise NotImplementedError

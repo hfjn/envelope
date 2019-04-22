@@ -6,22 +6,22 @@ import pendulum
 class Transaction:
     def __init__(
         self,
-        date: Any = None,
+        date: pendulum.Datetime = None,
         account: str = None,
         amount: float = None,
         payee: str = None,
-        currency="€",
-        purpose="",
-        value_date: Any = None,
-        category=None,
+        currency: str = "€",
+        purpose: str = "",
+        value_date: pendulum.Datetime = None,
+        category: str = None,
     ):
-        self.date: pendulum.Date = date
+        self.date: pendulum.Datetime = date
         self.amount: float = amount
         self.purpose: str = purpose
         self.payee: str = payee
         self.account: str = account
         self.category: str = category
-        self.value_date: pendulum.Date = value_date
+        self.value_date: pendulum.Datetime = value_date
 
         if not isinstance(self.date, pendulum.DateTime):
             raise ValueError(f"Date {self.date} not pendulum.DateTime")
@@ -32,30 +32,26 @@ class Transaction:
             self.currency: str = "€"
 
         else:
-            self.currency = currency
+            self.currency: str = currency
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.date.isoformat()}: {self.account} - {self.payee} {self.amount}{self.currency}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.date},{self.value_date},{self.purpose},{self.account},{self.amount},{self.payee},{self.currency}"
 
-    # TODO: Only use imported & fields for comparison
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Transaction):
             return False
         return other.as_dict() == self.as_dict()
 
-    def __hash__(self):
-        return hash(self.__repr__())
+    @property
+    def iso_date(self) -> Any:
+        return self.date.date.isoformat()
 
     @property
-    def iso_date(self):
-        return self.date.isoformat()
-
-    @property
-    def iso_value_date(self):
-        return self.value_date.isoformat()
+    def iso_value_date(self) -> Any:
+        return self.value_date.date.isoformat()
 
     def as_dict(self) -> Dict[str, Any]:
         return {
@@ -67,7 +63,3 @@ class Transaction:
             "value_date": self.value_date.isoformat(),
             "date": self.date.isoformat(),
         }
-
-    @property
-    def formatted_date(self):
-        return self.date.date().isoformat()

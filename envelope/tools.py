@@ -18,6 +18,7 @@ def list_files(path: str) -> List[Path]:
     assert import_folder.is_dir(), "Must be a folder."
     return [file for file in import_folder.glob("*.csv")]
 
+
 #
 # def _parse_transactions_from_statement(
 #     account: Account, statement: ofxparse.Statement

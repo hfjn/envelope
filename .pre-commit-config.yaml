@@ -1,0 +1,26 @@
+exclude: ^(data/)
+repos:
+
+#- repo: https://github.com/timothycrosley/isort
+#  rev: 4.3.17
+#  hooks:
+#    - id: isort
+#      language_version: python3.7
+
+- repo: https://github.com/ambv/black
+  rev: stable
+  hooks:
+  - id: black
+    language_version: python3.7
+
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.2.1
+  hooks:
+    - id: flake8
+      language_version: python3.7
+
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v0.701
+  hooks:
+    - id: mypy
+      language_version: python3.7
