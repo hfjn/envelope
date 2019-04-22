@@ -6,20 +6,18 @@ from typing import List, Dict, Callable, Set, Any
 
 import pendulum
 
-from envelope import parser, config
+from envelope.config import Config
+from envelope import parser
 from envelope.transaction import Transaction
-
-Snapshot: Path = Path(config["settings"]["folder"]) / "snapshot.json"  # type: ignore
 
 
 class Ledger:
-    def __init__(self, *, ledger_file: str = None) -> None:
+    def __init__(self) -> None:
         self.transactions: List[Transaction] = []
-        if ledger_file:
-            try:
-                self.load_from_json(ledger_file)
-            except FileNotFoundError:
-                print(f"File {ledger_file} does not exist. Loaded empty ledger.")
+        self._config: Config = Config()
+        self._snapshot: Path = Path(self._config.folder) / self._config.snapshot_name
+        if self._snapshot.exists():
+            self.load_from_json(self._snapshot)
 
     @property
     def payees(self) -> Set:
@@ -66,11 +64,11 @@ class Ledger:
         return balances
 
     def write_to_json(self) -> None:
-        file = Path("output.json")
+        file = Path(self._snapshot)
         file.write_text(self.json)
 
-    def load_from_json(self, file_path: str) -> None:
-        with Path(file_path).open() as f:
+    def load_from_json(self, file_path: Path) -> None:
+        with file_path.open() as f:
             transactions = json.load(f)
             self.transactions = [
                 Transaction(**parser.parse_json_row(transaction))
