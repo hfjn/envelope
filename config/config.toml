@@ -1,0 +1,16 @@
+[accounts]
+
+    [accounts.dkb]
+    friendly_name = "DKB Girokonto"
+
+    [accounts.creditcard]
+    friendly_name = "Kreditkarte"
+
+    [accounts.jannik]
+    friendly_name = "Kreditkarte Jannik"
+
+    [accounts.maria]
+    friendly_name = "Kreditkarte Maria"
+
+    [accounts.common]
+    friendly_name = "Gemeinschaftskonto"

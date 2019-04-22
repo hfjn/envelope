@@ -19,7 +19,10 @@ class Ledger:
     def __init__(self, *, ledger_file=None):
         self.transactions: List[Transaction] = []
         if ledger_file:
-            self.load_from_json(ledger_file)
+            try:
+                self.load_from_json(ledger_file)
+            except FileNotFoundError as er:
+                print(f"File {ledger_file} does not exist. Loaded empty ledger.")
 
     @property
     def payees(self):
@@ -35,7 +38,11 @@ class Ledger:
 
     @property
     def start_date(self):
-        return min(set(t._date for t in self.transactions))
+        return min(set(t.date for t in self.transactions))
+
+    @property
+    def end_date(self):
+        return max(set(t.date for t in self.transactions))
 
     @property
     def json(self):
@@ -77,7 +84,6 @@ class Ledger:
     def _persist(func):
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
-            print("inside wrapper")
             result = func(self, *args, **kwargs)
             self.write_to_json()
             return result

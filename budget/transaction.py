@@ -49,6 +49,14 @@ class Transaction:
     def __hash__(self):
         return hash(self.__repr__())
 
+    @property
+    def iso_date(self):
+        return self.date.isoformat()
+
+    @property
+    def iso_value_date(self):
+        return self.value_date.isoformat()
+
     def as_dict(self) -> Dict[str, Any]:
         return {
             "amount": self.amount,

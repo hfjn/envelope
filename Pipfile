@@ -10,6 +10,7 @@ pendulum = "*"
 click = "*"
 crayons = "*"
 ofxparse = "*"
+toml = "*"
 
 [requires]
 python_version = "3.7"
