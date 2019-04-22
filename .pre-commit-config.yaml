@@ -1,11 +1,10 @@
 exclude: ^(data/)
 repos:
 
-#- repo: https://github.com/timothycrosley/isort
-#  rev: 4.3.17
-#  hooks:
-#    - id: isort
-#      language_version: python3.7
+- repo: https://github.com/pre-commit/mirrors-isort
+  rev: v4.3.17
+  hooks:
+  - id: isort
 
 - repo: https://github.com/ambv/black
   rev: stable
