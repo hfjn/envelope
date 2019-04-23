@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, MutableMapping
+from typing import Any, List, MutableMapping
 
 import click
 import toml
@@ -21,6 +21,12 @@ class Config:
     @property
     def accounts(self) -> Any:
         return self.config["accounts"]
+
+    @property
+    def accounts_names(self) -> List[str]:
+        return [
+            account["friendly_name"] for _, account in self.config["accounts"].items()
+        ]
 
     def _load_config(self) -> MutableMapping[str, Any]:
         config_path = self._get_config_path()

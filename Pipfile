@@ -13,9 +13,10 @@ isort = "*"
 [packages]
 pendulum = "*"
 click = "*"
-crayons = "*"
 ofxparse = "*"
 toml = "*"
+yaspin = "*"
+inquirer = "*"
 
 [requires]
 python_version = "3.7"

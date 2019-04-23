@@ -1,10 +1,11 @@
 exclude: ^(data/)
 repos:
 
-- repo: https://github.com/pre-commit/mirrors-isort
-  rev: v4.3.17
-  hooks:
-  - id: isort
+# TODO: Need to set up with pycharm
+#- repo: https://github.com/pre-commit/mirrors-isort
+#  rev: v4.3.17
+#  hooks:
+#  - id: isort
 
 - repo: https://github.com/ambv/black
   rev: stable

@@ -15,6 +15,7 @@ class Ledger:
         self.transactions: List[Transaction] = []
         self.config: Config = Config()
         self._snapshot: Path = Path(self.config.folder) / self.config.snapshot_name
+        self.file_state: Dict[str, Any] = {}
         if self._snapshot.exists():
             self.load_from_json(self._snapshot)
 
@@ -38,9 +39,17 @@ class Ledger:
     def end_date(self) -> pendulum.DateTime:
         return max(set(t.date for t in self.transactions))
 
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "file_state": self.file_state,
+            "transactions": [
+                transaction.as_dict() for transaction in self.transactions
+            ],
+        }
+
     @property
     def json(self) -> str:
-        return json.dumps(self.transactions, default=lambda x: x.as_dict())
+        return json.dumps(self.as_dict())
 
     def running_balance(
         self, start: pendulum.DateTime, end: pendulum.DateTime
@@ -80,11 +89,12 @@ class Ledger:
 
     def load_from_json(self, file_path: Path) -> None:
         with file_path.open() as f:
-            transactions = json.load(f)
+            json_dump = json.load(f)
             self.transactions = [
                 Transaction(**parser.parse_json_row(transaction))
-                for transaction in transactions
+                for transaction in json_dump["transactions"]
             ]
+            self.file_state = json_dump["file_state"]
 
     def _persist(func: Callable) -> Any:  # type: ignore
         @functools.wraps(func)
@@ -99,6 +109,10 @@ class Ledger:
     def import_transactions_from_file(
         self, file_path: Path, *, account_name: str = None
     ) -> int:
+        self.file_state[f"{file_path.stem}{file_path.suffix}"] = {
+            "hash": parser.hash_file(file_path),
+            "account_name": account_name,
+        }
         old_length = len(self.transactions)
         new_transactions = parser.parse_file(file_path, account_name)
         self.add_transactions(new_transactions)

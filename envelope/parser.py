@@ -1,12 +1,13 @@
 import csv
+import hashlib as hash
 from collections import OrderedDict
 from pathlib import Path
-from typing import Dict, List, Any, Iterable
+from typing import Any, Dict, Iterable, List
 
 import pendulum
-
 from envelope.transaction import Transaction
 
+BLOCKSIZE = 65536
 MONEY_MONEY_MAPPING: Dict[str, Any] = {
     "fields": {
         "date": "Date",
@@ -20,6 +21,16 @@ MONEY_MONEY_MAPPING: Dict[str, Any] = {
     "date_layout": "DD.MM.YY",
     "decimal_separator": ",",
 }
+
+
+def hash_file(file_path: Path) -> str:
+    sha = hash.sha256()
+    with file_path.open(mode="rb") as file:
+        file_buffer = file.read(BLOCKSIZE)
+        while len(file_buffer) > 0:
+            sha.update(file_buffer)
+            file_buffer = file.read(BLOCKSIZE)
+    return sha.hexdigest()
 
 
 def parse_file(file_path: Path, account_name: str) -> Any:
