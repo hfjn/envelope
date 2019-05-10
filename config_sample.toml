@@ -1,5 +1,7 @@
 [settings]
-folder = ""
+folder = "/Users/hfjn/.finances/"
+snapshot_name = "snapshot.json"
+db_name = "finances.db"
 
 [accounts]
 
