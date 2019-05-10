@@ -1,9 +1,24 @@
 from typing import Any, Dict
 
 import pendulum
+from sqlalchemy import Column, Integer, String, DateTime, Float
+
+from envelope.backend import BaseModel
 
 
-class Transaction:
+class Transaction(BaseModel):
+    __tablename__ = "transactions"
+
+    id = Column(Integer, primary_key=True)
+    date = Column(DateTime)
+    account = Column(String)
+    amount = Column(Float)
+    payee = Column(String)
+    currency = Column(String)
+    purpose = Column(String, nullable=True)
+    value_date = Column(DateTime, nullable=True)
+    category = Column(String, nullable=True)
+
     def __init__(
         self,
         date: pendulum.DateTime = None,
@@ -22,17 +37,7 @@ class Transaction:
         self.account: str = account
         self.category: str = category
         self.value_date: pendulum.DateTime = value_date
-
-        if not isinstance(self.date, pendulum.DateTime):
-            raise ValueError(f"Date {self.date} not pendulum.DateTime")
-        if not isinstance(self.value_date, pendulum.DateTime):
-            raise ValueError(f"Date {self.value_date} not pendulum.DateTime")
-
-        if currency == "EUR":
-            self.currency: str = "€"
-
-        else:
-            self.currency: str = currency
+        self.currency: str = currency
 
     def __str__(self) -> str:
         return f"{self.date.isoformat()}: {self.account} - {self.payee} {self.amount}{self.currency}"

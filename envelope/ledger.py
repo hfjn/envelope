@@ -5,17 +5,24 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Set
 
 import pendulum
+
 from envelope import parser
+from envelope.backend import session, BaseModel, engine
 from envelope.config import Config
 from envelope.transaction import Transaction
 
 
 class Ledger:
     def __init__(self) -> None:
-        self.transactions: List[Transaction] = []
         self.config: Config = Config()
         self._snapshot: Path = Path(self.config.folder) / self.config.snapshot_name
         self.file_state: Dict[str, Any] = {}
+
+        # self.transactions: List[Transaction] = []
+
+        BaseModel.metadata.drop_all(bind=engine)
+        BaseModel.metadata.create_all(bind=engine)
+
         if self._snapshot.exists():
             self.load_from_json(self._snapshot)
 
@@ -90,11 +97,16 @@ class Ledger:
     def load_from_json(self, file_path: Path) -> None:
         with file_path.open() as f:
             json_dump = json.load(f)
-            self.transactions = [
+            transactions = [
                 Transaction(**parser.parse_json_row(transaction))
                 for transaction in json_dump["transactions"]
             ]
             self.file_state = json_dump["file_state"]
+
+        for transaction in transactions:
+            transaction.save()
+
+        session.commit()
 
     def _persist(func: Callable) -> Any:  # type: ignore
         @functools.wraps(func)
