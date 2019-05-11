@@ -1,13 +1,12 @@
-import functools
 import json
 from itertools import groupby
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Set
+from typing import Any, Dict, Set
 
 import pendulum
 
 from envelope import parser
-from envelope.backend import session, BaseModel, engine
+from envelope.backend import session, BaseModel, engine, commit
 from envelope.config import Config
 from envelope.transaction import Transaction
 
@@ -18,13 +17,12 @@ class Ledger:
         self._snapshot: Path = Path(self.config.folder) / self.config.snapshot_name
         self.file_state: Dict[str, Any] = {}
 
-        # self.transactions: List[Transaction] = []
-
         BaseModel.metadata.drop_all(bind=engine)
         BaseModel.metadata.create_all(bind=engine)
 
-        if self._snapshot.exists():
-            self.load_from_json(self._snapshot)
+    @property
+    def transactions(self):
+        return session.query(Transaction).count()
 
     @property
     def payees(self) -> Set:
@@ -94,6 +92,7 @@ class Ledger:
         file = Path(self._snapshot)
         file.write_text(self.json)
 
+    @commit
     def load_from_json(self, file_path: Path) -> None:
         with file_path.open() as f:
             json_dump = json.load(f)
@@ -106,38 +105,18 @@ class Ledger:
         for transaction in transactions:
             transaction.save()
 
-        session.commit()
-
-    def _persist(func: Callable) -> Any:  # type: ignore
-        @functools.wraps(func)
-        def wrapper(self, *args: Any, **kwargs: Any) -> Any:  # type: ignore
-            result = func(self, *args, **kwargs)
-            self.write_to_json()
-            return result
-
-        return wrapper
-
-    @_persist
+    @commit
     def import_transactions_from_file(
         self, file_path: Path, *, account_name: str = None
-    ) -> int:
+    ):
         self.file_state[f"{file_path.stem}{file_path.suffix}"] = {
             "hash": parser.hash_file(file_path),
             "account_name": account_name,
         }
-        old_length = len(self.transactions)
+        old_number = self.transactions
         new_transactions = parser.parse_file(file_path, account_name)
-        self.add_transactions(new_transactions)
-        return len(self.transactions) - old_length
 
-    def add_transactions(
-        self, new_transactions: List[Transaction], *, validation: bool = True
-    ) -> None:
-        if validation and len(self.transactions) != 0:
-            self.transactions += [
-                transaction
-                for transaction in new_transactions
-                if transaction not in self.transactions
-            ]
-        else:
-            self.transactions += [transaction for transaction in new_transactions]
+        for transaction in new_transactions:
+            transaction.save()
+
+        return self.transactions - old_number

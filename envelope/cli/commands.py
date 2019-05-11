@@ -2,8 +2,8 @@ from pathlib import Path
 from typing import Union, Any
 
 import click
-import inquirer
 import pendulum
+from PyInquirer import prompt
 from yaspin import yaspin
 
 from envelope import ledger
@@ -79,7 +79,7 @@ def import_files() -> None:
 
 
 def _load_transactions_from_file(file: Path, account_name: str) -> None:
-    with yaspin(text="Importing...") as spinner:
+    with yaspin(text=f"Importing {file.stem + file.suffix}...") as spinner:
         number_of_new_transactions = ledger.import_transactions_from_file(
             file, account_name=account_name
         )
@@ -91,10 +91,17 @@ def _get_account_name(file: Path) -> Any:
     file_name = f"{file.stem}{file.suffix}"
     if file_name in ledger.file_state.keys():
         return ledger.file_state[file_name]["account_name"]
-    click.echo(f"Account name of {file.stem}:")
-    answers = inquirer.prompt(
-        [inquirer.List("account_name", choices=ledger.config.accounts_names)]
-    )
+    click.echo()
+    questions = [
+        {
+            "type": "list",
+            "name": "account_name",
+            "message": f"Account name of {file.stem+file.suffix}:",
+            "choices": ledger.config.accounts_names,
+        }
+    ]
+
+    answers = prompt(questions)
     return answers["account_name"]
 
 

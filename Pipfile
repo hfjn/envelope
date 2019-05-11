@@ -16,8 +16,9 @@ click = "*"
 ofxparse = "*"
 toml = "*"
 yaspin = "*"
-inquirer = "*"
+pyinquirer = "*"
 sqlalchemy = "*"
+sqlalchemy-stubs = "*"
 
 [requires]
 python_version = "3.7"

@@ -3,7 +3,7 @@ from typing import Any, Dict
 import pendulum
 from sqlalchemy import Column, Integer, String, DateTime, Float
 
-from envelope.backend import BaseModel
+from envelope.backend import BaseModel, session
 
 
 class Transaction(BaseModel):
@@ -49,6 +49,13 @@ class Transaction(BaseModel):
         if not isinstance(other, Transaction):
             return False
         return other.as_dict() == self.as_dict()
+
+    @classmethod
+    def get_or_create(cls, **kwargs):
+        exists = session.query(Transaction.id).filter_by(**kwargs).scalar() is not None
+        if exists:
+            return session.query(Transaction).filter_by(**kwargs).first()
+        return Transaction(**kwargs)
 
     @property
     def iso_date(self) -> Any:

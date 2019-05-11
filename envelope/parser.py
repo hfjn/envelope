@@ -82,7 +82,7 @@ def _parse_csv_row(
         else:
             transaction[field] = row[mapped_field]
 
-    return Transaction(**transaction)
+    return Transaction.get_or_create(**transaction)
 
 
 def _parse_csv_amount(amount: str, separator: str) -> float:

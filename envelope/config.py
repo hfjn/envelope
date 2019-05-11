@@ -11,6 +11,10 @@ class Config:
         self.config = self._load_config()
 
     @property
+    def debug_mode(self) -> bool:
+        return self.config["settings"]["debug_mode"]
+
+    @property
     def database_name(self) -> str:
         return self.config["settings"]["db_name"]
 
