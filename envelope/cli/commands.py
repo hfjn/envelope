@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Union, Any
 
+
 import click
 import inquirer
 import pendulum
@@ -24,6 +25,10 @@ def list() -> None:
 
 @envelope.command()
 def get() -> None:
+    raise NotImplementedError
+
+@envelope.command()
+def add() -> None:
     raise NotImplementedError
 
 
@@ -69,7 +74,10 @@ def stats() -> None:
 
 @envelope.command()
 def import_files() -> None:
-    files = list_files("/Users/hfjn/code/envelope/data")
+
+    path = Path.cwd() / 'data'
+
+    files = list_files(path)
     for file in files:
         if _file_load_necessary(file):
             account_name = _get_account_name(file)
