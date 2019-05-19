@@ -1,55 +1,60 @@
-import functools
 import json
-from itertools import groupby
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Set
+from typing import Any, Dict, Set, Optional
 
 import pendulum
+from sqlalchemy import func
+
 from envelope import parser
+from envelope.backend import session, BaseModel, engine, commit
 from envelope.config import Config
 from envelope.transaction import Transaction
 
 
 class Ledger:
     def __init__(self) -> None:
-        self.transactions: List[Transaction] = []
         self.config: Config = Config()
         self._snapshot: Path = Path(self.config.folder) / self.config.snapshot_name
         self.file_state: Dict[str, Any] = {}
-        if self._snapshot.exists():
-            self.load_from_json(self._snapshot)
+
+        BaseModel.metadata.create_all(bind=engine)
+
+    @property
+    def num_transactions(self):
+        return session.query(Transaction).count()
 
     @property
     def payees(self) -> Set:
-        return set(t.payee for t in self.transactions)
+        return session.query(Transaction.payee).distinct().all()
 
     @property
     def currencies(self) -> Set:
-        return set(t.currency for t in self.transactions)
+        return session.query(Transaction.currency).distinct().all()
 
     @property
     def accounts(self) -> Set:
-        return set(t.account for t in self.transactions)
+        return session.query(Transaction.account).distinct().all()
 
     @property
-    def start_date(self) -> pendulum.DateTime:
-        return min(set(t.date for t in self.transactions))
+    def start_date(self) -> Optional[pendulum.DateTime]:
+        result = session.query(func.min(Transaction.date)).first()
+        if len(result) == 1:
+            return pendulum.instance(result[0])
+        return None
 
     @property
-    def end_date(self) -> pendulum.DateTime:
-        return max(set(t.date for t in self.transactions))
-
-    def as_dict(self) -> Dict[str, Any]:
-        return {
-            "file_state": self.file_state,
-            "transactions": [
-                transaction.as_dict() for transaction in self.transactions
-            ],
-        }
+    def last_import(self) -> Optional[pendulum.DateTime]:
+        result = session.query(func.max(Transaction.import_timestamp)).first()
+        if len(result) == 1:
+            return pendulum.instance(result[0])
+        return None
 
     @property
-    def json(self) -> str:
-        return json.dumps(self.as_dict())
+    def end_date(self) -> Optional[pendulum.DateTime]:
+        result = session.query(func.max(Transaction.date)).first()
+        if len(result) == 1:
+            return pendulum.instance(result[0])
+        return None
 
     def running_balance(
         self, start: pendulum.DateTime, end: pendulum.DateTime
@@ -60,72 +65,68 @@ class Ledger:
     def balance(
         self, *, date: pendulum.DateTime = pendulum.now(), group: str = "account"
     ) -> Dict[pendulum.DateTime, float]:
-        balances = {}
-        for grouped, transactions in groupby(
-            self.transactions, key=lambda t: getattr(t, group)  # type: ignore
-        ):
-            balances[grouped] = sum(
-                transaction.amount
-                for transaction in transactions
-                if transaction.date < date
-            )
-        return balances
+        balance_rows = (
+            session.query(getattr(Transaction, group), func.sum(Transaction.amount))
+            .filter(Transaction.date <= date)
+            .group_by(group)
+            .all()
+        )
+
+        return dict(balance_rows)
 
     def income_statement(
         self, start_date: pendulum.DateTime, end_date: pendulum.DateTime
     ) -> Dict[str, float]:
-        statement: Dict[str, float] = {}
-        for transaction in self.transactions:
-            if transaction.amount > 0 and start_date <= transaction.date <= end_date:
-                if transaction.payee in statement:
-                    statement[transaction.payee] += transaction.amount
-                else:
-                    statement[transaction.payee] = transaction.amount
-        return statement
+        balance_rows = (
+            session.query(Transaction.payee, func.sum(Transaction.amount))
+            .filter(Transaction.date <= end_date)
+            .filter(Transaction.date >= start_date)
+            .filter(Transaction.amount >= 0)
+            .group_by(Transaction.payee)
+            .all()
+        )
+        return dict(balance_rows)
 
-    def write_to_json(self) -> None:
-        file = Path(self._snapshot)
-        file.write_text(self.json)
-
+    @commit
     def load_from_json(self, file_path: Path) -> None:
         with file_path.open() as f:
             json_dump = json.load(f)
-            self.transactions = [
+            transactions = [
                 Transaction(**parser.parse_json_row(transaction))
                 for transaction in json_dump["transactions"]
             ]
             self.file_state = json_dump["file_state"]
 
-    def _persist(func: Callable) -> Any:  # type: ignore
-        @functools.wraps(func)
-        def wrapper(self, *args: Any, **kwargs: Any) -> Any:  # type: ignore
-            result = func(self, *args, **kwargs)
-            self.write_to_json()
-            return result
+        for transaction in transactions:
+            transaction.save()
 
-        return wrapper
-
-    @_persist
+    @commit
     def import_transactions_from_file(
         self, file_path: Path, *, account_name: str = None
-    ) -> int:
+    ):
         self.file_state[f"{file_path.stem}{file_path.suffix}"] = {
             "hash": parser.hash_file(file_path),
             "account_name": account_name,
         }
-        old_length = len(self.transactions)
-        new_transactions = parser.parse_file(file_path, account_name)
-        self.add_transactions(new_transactions)
-        return len(self.transactions) - old_length
+        old_number = self.num_transactions
 
-    def add_transactions(
-        self, new_transactions: List[Transaction], *, validation: bool = True
-    ) -> None:
-        if validation and len(self.transactions) != 0:
-            self.transactions += [
-                transaction
-                for transaction in new_transactions
-                if transaction not in self.transactions
-            ]
+        max_account_date = (
+            session.query(func.max(Transaction.date))
+            .filter(Transaction.account == account_name)
+            .first()
+        )
+        if max_account_date[0] is not None:
+            max_account_date = pendulum.instance(max_account_date[0])
         else:
-            self.transactions += [transaction for transaction in new_transactions]
+            max_account_date = None
+
+        # Make Optional
+
+        new_transactions = parser.parse_file(
+            file_path, account_name, max_account_date=max_account_date
+        )
+
+        for transaction in new_transactions:
+            transaction.save()
+
+        return self.num_transactions - old_number

@@ -11,6 +11,18 @@ class Config:
         self.config = self._load_config()
 
     @property
+    def debug_mode(self) -> bool:
+        return self.config["settings"]["debug_mode"]
+
+    @property
+    def database_name(self) -> str:
+        return self.config["settings"]["db_name"]
+
+    @property
+    def database_path(self) -> Path:
+        return Path(self.folder) / self.database_name
+
+    @property
     def folder(self) -> Any:
         return self.config["settings"]["folder"]
 

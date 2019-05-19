@@ -33,19 +33,41 @@ def hash_file(file_path: Path) -> str:
     return sha.hexdigest()
 
 
-def parse_file(file_path: Path, account_name: str) -> Any:
+def parse_file(file_path: Path, account_name: str, max_account_date) -> Any:
+    import_timestamp: pendulum.DateTime = pendulum.now()
+
     with file_path.open() as file:
         file_type: str = file_path.suffix.replace(".", "")
         if file_type not in FILE_TYPE_MAPPING.keys():
             raise NotImplementedError()
-        return FILE_TYPE_MAPPING[file_type](file, account_name)
+        return FILE_TYPE_MAPPING[file_type](
+            file, account_name, import_timestamp, max_account_date
+        )
 
 
-def parse_csv(file: Iterable, account_name: str) -> List[Transaction]:
+def parse_csv(
+    file: Iterable,
+    account_name: str,
+    import_timestamp: pendulum.DateTime,
+    max_account_date: pendulum.DateTime,
+) -> List[Transaction]:
     csv_reader = csv.DictReader(file, delimiter=";")
-    rows = [
-        _parse_csv_row(row, MONEY_MONEY_MAPPING, account_name) for row in csv_reader
-    ]
+
+    if max_account_date:
+        rows = [
+            _parse_csv_row(row, MONEY_MONEY_MAPPING, account_name, import_timestamp)
+            for row in csv_reader
+            if pendulum.from_format(
+                row[MONEY_MONEY_MAPPING["fields"]["date"]],
+                MONEY_MONEY_MAPPING["date_layout"],
+            )
+            >= max_account_date
+        ]
+    else:
+        rows = [
+            _parse_csv_row(row, MONEY_MONEY_MAPPING, account_name, import_timestamp)
+            for row in csv_reader
+        ]
     return rows
 
 
@@ -58,17 +80,16 @@ def parse_json_row(transaction: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _parse_csv_row(
-    row: OrderedDict, mapping: Dict[str, Any], account_name: str
+    row: OrderedDict,
+    mapping: Dict[str, Any],
+    account_name: str,
+    import_timestamp: pendulum.DateTime,
 ) -> Transaction:
     """
     Parses csv row and sets all fields according to given mapping.
     Account name will be overwritten if given in the csv.
-
-    :param row:
-    :param mapping:
-    :param account_name:
-    :return:
     """
+
     transaction: Dict[str, Any] = {"account": account_name}
     for field, mapped_field in mapping["fields"].items():
         if field == "date" or field == "value_date":
@@ -81,8 +102,9 @@ def _parse_csv_row(
             )
         else:
             transaction[field] = row[mapped_field]
+    transaction["import_timestamp"] = import_timestamp
 
-    return Transaction(**transaction)
+    return Transaction.get_or_create(**transaction)
 
 
 def _parse_csv_amount(amount: str, separator: str) -> float:
