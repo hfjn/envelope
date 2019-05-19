@@ -62,9 +62,10 @@ def balance(group: str) -> None:
 def stats() -> None:
     click.echo(f"Start Date: {ledger.start_date.to_date_string()}")
     click.echo(f"End Date: {ledger.end_date.to_date_string()}")
+    click.echo(f"Last Import: {ledger.last_import.to_date_string()}")
     click.echo(f"Payees: {len(ledger.payees)}")
     click.echo(f"Accounts: {len(ledger.accounts)}")
-    click.echo(f"Transactions: {len(ledger.transactions)}")
+    click.echo(f"Transactions: {ledger.num_transactions}")
 
 
 @envelope.command()

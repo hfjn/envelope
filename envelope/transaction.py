@@ -1,7 +1,7 @@
 from typing import Any, Dict
 
 import pendulum
-from sqlalchemy import Column, Integer, String, DateTime, Float
+from sqlalchemy import Column, Integer, String, DateTime, Float, TIMESTAMP
 
 from envelope.backend import BaseModel, session
 
@@ -18,6 +18,8 @@ class Transaction(BaseModel):
     purpose = Column(String, nullable=True)
     value_date = Column(DateTime, nullable=True)
     category = Column(String, nullable=True)
+    import_timestamp = Column(TIMESTAMP)
+    row_hash = Column(String)
 
     def __init__(
         self,
@@ -29,6 +31,8 @@ class Transaction(BaseModel):
         purpose: str = "",
         value_date: pendulum.DateTime = None,
         category: str = None,
+        import_timestamp: pendulum.DateTime = None,
+        row_hash: str = None,
     ):
         self.date: pendulum.DateTime = date
         self.amount: float = amount
@@ -38,6 +42,8 @@ class Transaction(BaseModel):
         self.category: str = category
         self.value_date: pendulum.DateTime = value_date
         self.currency: str = currency
+        self.import_timestamp: pendulum.DateTime = import_timestamp
+        self.row_hash: str = row_hash
 
     def __str__(self) -> str:
         return f"{self.date.isoformat()}: {self.account} - {self.payee} {self.amount}{self.currency}"
@@ -52,6 +58,9 @@ class Transaction(BaseModel):
 
     @classmethod
     def get_or_create(cls, **kwargs):
+        kwargs.pop(
+            "import_timestamp"
+        )  # Import Date should not be used to identify uniqueness
         exists = session.query(Transaction.id).filter_by(**kwargs).scalar() is not None
         if exists:
             return session.query(Transaction).filter_by(**kwargs).first()
