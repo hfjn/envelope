@@ -1,11 +1,12 @@
 import csv
+import hashlib
 import hashlib as hash
+import json
 from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 import pendulum
-from envelope.transaction import Transaction
 
 BLOCKSIZE = 65536
 MONEY_MONEY_MAPPING: Dict[str, Any] = {
@@ -45,12 +46,26 @@ def parse_file(file_path: Path, account_name: str, max_account_date) -> Any:
         )
 
 
+def _ensure_no_duplicate_rows(rows):
+    seen = set()
+    for idx, row in enumerate(rows):
+        representation = json.dumps(row, sort_keys=True, default=str)
+        representation = hashlib.md5(representation.encode("utf-8")).hexdigest()
+        if representation in seen:
+            print(f"Duplicate Row: {row}")
+            row["meta"] = idx
+            rows[idx] = row
+        else:
+            seen.add(representation)
+    return rows
+
+
 def parse_csv(
     file: Iterable,
     account_name: str,
     import_timestamp: pendulum.DateTime,
     max_account_date: pendulum.DateTime,
-) -> List[Transaction]:
+) -> List[Dict[str, Any]]:
     csv_reader = csv.DictReader(file, delimiter=";")
 
     if max_account_date:
@@ -68,6 +83,7 @@ def parse_csv(
             _parse_csv_row(row, MONEY_MONEY_MAPPING, account_name, import_timestamp)
             for row in csv_reader
         ]
+    rows = _ensure_no_duplicate_rows(rows)
     return rows
 
 
@@ -84,7 +100,7 @@ def _parse_csv_row(
     mapping: Dict[str, Any],
     account_name: str,
     import_timestamp: pendulum.DateTime,
-) -> Transaction:
+) -> Dict[str, Any]:
     """
     Parses csv row and sets all fields according to given mapping.
     Account name will be overwritten if given in the csv.
@@ -104,7 +120,7 @@ def _parse_csv_row(
             transaction[field] = row[mapped_field]
     transaction["import_timestamp"] = import_timestamp
 
-    return Transaction.get_or_create(**transaction)
+    return transaction
 
 
 def _parse_csv_amount(amount: str, separator: str) -> float:

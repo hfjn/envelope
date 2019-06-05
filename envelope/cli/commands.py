@@ -1,16 +1,18 @@
+import sys
 from pathlib import Path
 from typing import Union, Any
-
 
 import click
 import pendulum
 from PyInquirer import prompt
+from tabulate import tabulate
 from yaspin import yaspin
 
 from envelope import ledger
 from envelope.cli.output import pretty_dict
 from envelope.parser import hash_file
 from envelope.tools import list_files
+from envelope.transaction import Transaction
 
 
 @click.group()
@@ -19,8 +21,39 @@ def envelope() -> None:
 
 
 @envelope.command()
-def list() -> None:
-    raise NotImplementedError
+@click.argument("account", type=click.Choice(ledger.config.accounts_names))
+@click.option("--n", default=100, help="Number of rows")
+def list(account, n) -> None:
+    transactions = [
+        [
+            transaction.id,
+            transaction.date,
+            transaction.payee,
+            transaction.category,
+            transaction.amount,
+            transaction.currency,
+        ]
+        for transaction in ledger.filter_transactions(
+            "account", account, number_of_rows=n
+        )
+    ]
+    click.echo(
+        tabulate(
+            transactions,
+            headers=("id", "date", "payee", "category", "amount", "currency"),
+        )
+    )
+
+
+@envelope.command()
+@click.argument("id")
+def edit(id):
+    transaction: Transaction = ledger.filter_transactions("id", id)[0]
+    edited = click.edit(transaction.to_yaml())
+    if not edited:
+        click.echo("Editing was cancelled.")
+        sys.exit(1)
+    transaction.from_yaml(edited)
 
 
 @envelope.command()
@@ -76,9 +109,7 @@ def stats() -> None:
 
 @envelope.command()
 def import_files() -> None:
-
     path = Path.cwd() / "data"
-
     files = list_files(path)
     for file in files:
         if _file_load_necessary(file):

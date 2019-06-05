@@ -42,9 +42,17 @@ class Ledger:
             return pendulum.instance(result[0])
         return None
 
+    def filter_transactions(self, filter_attr, value, *, number_of_rows=1):
+        return (
+            session.query(Transaction)
+            .filter(getattr(Transaction, filter_attr) == value)
+            .limit(number_of_rows)
+            .all()
+        )
+
     @property
     def last_import(self) -> Optional[pendulum.DateTime]:
-        result = session.query(func.max(Transaction.import_timestamp)).first()
+        result = session.query(func.max(Transaction.added_timestamp)).first()
         if len(result) == 1:
             return pendulum.instance(result[0])
         return None
@@ -126,7 +134,8 @@ class Ledger:
             file_path, account_name, max_account_date=max_account_date
         )
 
-        for transaction in new_transactions:
+        for transaction_dict in new_transactions:
+            transaction = Transaction.get_or_create(**transaction_dict)
             transaction.save()
 
         return self.num_transactions - old_number

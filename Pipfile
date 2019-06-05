@@ -19,6 +19,8 @@ yaspin = "*"
 pyinquirer = "*"
 sqlalchemy = "*"
 sqlalchemy-stubs = "*"
+tabulate = "*"
+pyyaml = "*"
 
 [requires]
 python_version = "3.6"

@@ -1,9 +1,12 @@
+import datetime
 from typing import Any, Dict
 
 import pendulum
+import yaml
 from sqlalchemy import Column, Integer, String, DateTime, Float, TIMESTAMP
+from sqlalchemy.exc import DatabaseError
 
-from envelope.backend import BaseModel, session
+from envelope.backend import BaseModel, session, commit
 
 
 class Transaction(BaseModel):
@@ -18,8 +21,8 @@ class Transaction(BaseModel):
     purpose = Column(String, nullable=True)
     value_date = Column(DateTime, nullable=True)
     category = Column(String, nullable=True)
-    import_timestamp = Column(TIMESTAMP)
-    row_hash = Column(String)
+    added_timestamp = Column(TIMESTAMP)
+    meta = Column(String)
 
     def __init__(
         self,
@@ -31,8 +34,8 @@ class Transaction(BaseModel):
         purpose: str = "",
         value_date: pendulum.DateTime = None,
         category: str = None,
-        import_timestamp: pendulum.DateTime = None,
-        row_hash: str = None,
+        added_timestamp: pendulum.DateTime = None,
+        meta: str = None,
     ):
         self.date: pendulum.DateTime = date
         self.amount: float = amount
@@ -42,8 +45,8 @@ class Transaction(BaseModel):
         self.category: str = category
         self.value_date: pendulum.DateTime = value_date
         self.currency: str = currency
-        self.import_timestamp: pendulum.DateTime = import_timestamp
-        self.row_hash: str = row_hash
+        self.added_timestamp: pendulum.DateTime = added_timestamp
+        self.meta: str = meta
 
     def __str__(self) -> str:
         return f"{self.date.isoformat()}: {self.account} - {self.payee} {self.amount}{self.currency}"
@@ -68,19 +71,64 @@ class Transaction(BaseModel):
 
     @property
     def iso_date(self) -> Any:
-        return self.date.date.isoformat()
+        return self.date.isoformat()
 
     @property
     def iso_value_date(self) -> Any:
-        return self.value_date.date.isoformat()
+        return self.value_date.isoformat()
 
     def as_dict(self) -> Dict[str, Any]:
         return {
             "amount": self.amount,
             "purpose": self.purpose,
-            "payee": self.payee,
             "account": self.account,
-            "category": self.account,
             "value_date": self.value_date.isoformat(),
             "date": self.date.isoformat(),
+            "payee": self.payee,
+            "category": self.category,
         }
+
+    def to_yaml(self) -> str:
+        return yaml.dump(self.as_dict())
+
+    def _pendulum_to_datetime(self, parsed: pendulum.DateTime):
+        return datetime.datetime(
+            parsed.year,
+            parsed.month,
+            parsed.day,
+            parsed.hour,
+            parsed.minute,
+            parsed.second,
+            parsed.microsecond,
+            tzinfo=parsed.tz,
+        )
+
+    @commit
+    def from_yaml(self, data) -> None:
+        new_values = yaml.safe_load(data)
+        for attr, value in new_values.items():
+            if attr == "date" or attr == "value_date":
+                value = self._pendulum_to_datetime(pendulum.parse(value))
+            setattr(self, attr, value)
+        self.save()
+
+    def save(self):
+        session.add(self)
+        self._flush()
+        return self
+
+    def update(self, **kwargs):
+        for attr, value in kwargs.items():
+            setattr(self, attr, value)
+        return self.save()
+
+    def delete(self):
+        session.delete(self)
+        self._flush()
+
+    def _flush(self):
+        try:
+            session.flush()
+        except DatabaseError:
+            session.rollback()
+            raise
