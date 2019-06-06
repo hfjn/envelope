@@ -71,7 +71,7 @@ class Transaction(BaseModel):
 
     @property
     def iso_date(self) -> Any:
-        return self.date.isoformat()
+        return self.date.date().isoformat()
 
     @property
     def iso_value_date(self) -> Any:
@@ -83,7 +83,7 @@ class Transaction(BaseModel):
             "purpose": self.purpose,
             "account": self.account,
             "value_date": self.value_date.isoformat(),
-            "date": self.date.isoformat(),
+            "date": self.iso_date,
             "payee": self.payee,
             "category": self.category,
         }

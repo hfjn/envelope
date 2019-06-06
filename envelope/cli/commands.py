@@ -27,7 +27,7 @@ def list(account, n) -> None:
     transactions = [
         [
             transaction.id,
-            transaction.date,
+            transaction.iso_date,
             transaction.payee,
             transaction.category,
             transaction.amount,
